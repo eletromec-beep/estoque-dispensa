@@ -203,7 +203,7 @@ export default function App() {
   const [showShopping, setShowShopping] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
-  const ADMIN_PIN = '1234';
+  const ADMIN_PIN = '4132';
 
   const loadItems = useCallback(async (isRefresh = false) => {
     if (isRefresh) setSyncing(true);
