@@ -341,7 +341,6 @@ export default function App() {
         >
           Entrar
         </button>
-        <p className="text-xs text-gray-400 text-center">PIN padrão: 1234</p>
       </div>
     );
   }
@@ -373,22 +372,24 @@ export default function App() {
 
       {errorMsg && <p className="text-xs text-red-500 text-center bg-red-50 rounded-lg p-2">{errorMsg}</p>}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setShowShopping(false)}
-          className={`flex-1 rounded-lg py-2 text-sm font-medium border ${!showShopping ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300'}`}
-        >
-          Itens
-        </button>
-        <button
-          onClick={() => setShowShopping(true)}
-          className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-sm font-medium border ${showShopping ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300'}`}
-        >
-          <ShoppingCart size={14} /> Comprar
-        </button>
-      </div>
+      {role === 'admin' && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowShopping(false)}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium border ${!showShopping ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300'}`}
+          >
+            Itens
+          </button>
+          <button
+            onClick={() => setShowShopping(true)}
+            className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-sm font-medium border ${showShopping ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300'}`}
+          >
+            <ShoppingCart size={14} /> Comprar
+          </button>
+        </div>
+      )}
 
-      {showShopping ? (
+      {showShopping && role === 'admin' ? (
         <ShoppingList items={items} />
       ) : (
         <>
