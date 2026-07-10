@@ -400,6 +400,17 @@ export default function App() {
 
       {errorMsg && <p className="text-xs text-red-500 text-center bg-red-50 rounded-lg p-2">{errorMsg}</p>}
 
+      {role === 'user' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-base text-amber-900 leading-relaxed">
+          <p className="font-semibold mb-1">Ajuste as quantidades...</p>
+          <p>
+            de acordo com o que está disponível no armário do salão. Exemplo: se o item <span className="font-semibold">"detergente"</span> está
+            faltando, a quantidade informada deve ser <span className="font-semibold">0 (zero)</span>; dessa forma o irmão saberá a quantidade
+            que precisa comprar desse item.
+          </p>
+        </div>
+      )}
+
       {role === 'admin' && (
         <div className="flex gap-2">
           <button
