@@ -194,6 +194,30 @@ function ShoppingList({ items }) {
   );
 }
 
+function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete }) {
+  return (
+    <div className="flex flex-col gap-6">
+      {CATEGORIES.map((cat) => {
+        const catItems = items.filter((i) => i.category === cat.key);
+        if (catItems.length === 0) return null;
+        return (
+          <div key={cat.key}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-2.5 h-2.5 rounded-full ${cat.dot}`} />
+              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{cat.label}</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {catItems.map((item) => (
+                <ItemCard key={item.id} item={item} role={role} onAdjust={onAdjust} onEditMin={onEditMin} onDelete={onDelete} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -395,6 +419,8 @@ export default function App() {
 
       {showShopping && role === 'admin' ? (
         <ShoppingList items={items} />
+      ) : role === 'user' ? (
+        <GroupedItemList items={items} role={role} onAdjust={adjust} onEditMin={editMin} onDelete={deleteItem} />
       ) : (
         <>
           <button
@@ -415,7 +441,7 @@ export default function App() {
         </>
       )}
 
-      {menuOpen && (
+      {menuOpen && role === 'admin' && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
           <div className="relative w-64 max-w-[80%] h-full bg-white shadow-xl p-4 flex flex-col gap-1 overflow-y-auto">
