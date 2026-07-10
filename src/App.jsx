@@ -11,6 +11,8 @@ import {
   Package,
   ChevronLeft,
   RefreshCw,
+  Menu,
+  X,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -201,6 +203,7 @@ export default function App() {
   const [role, setRole] = useState(null);
   const [activeCat, setActiveCat] = useState(CATEGORIES[0].key);
   const [showShopping, setShowShopping] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const ADMIN_PIN = '4132';
@@ -345,6 +348,7 @@ export default function App() {
     );
   }
 
+  const catInfo = CATEGORIES.find((c) => c.key === activeCat);
   const catItems = items.filter((i) => i.category === activeCat);
 
   return (
@@ -393,19 +397,13 @@ export default function App() {
         <ShoppingList items={items} />
       ) : (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setActiveCat(c.key)}
-                className={`whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full border ${
-                  activeCat === c.key ? `${c.bg} ${c.text} border-current` : 'bg-white text-gray-500 border-gray-300'
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 bg-white self-start"
+          >
+            <Menu size={18} className="text-gray-600" />
+            <span className={`text-sm font-medium ${catInfo.text}`}>{catInfo.label}</span>
+          </button>
 
           <div className="flex flex-col gap-3">
             {catItems.map((item) => (
@@ -415,6 +413,35 @@ export default function App() {
             {role === 'admin' && <AddItemForm category={activeCat} onAdd={addItem} />}
           </div>
         </>
+      )}
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <div className="relative w-64 max-w-[80%] h-full bg-white shadow-xl p-4 flex flex-col gap-1 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-semibold text-gray-800">Categorias</p>
+              <button onClick={() => setMenuOpen(false)} className="text-gray-400" aria-label="Fechar menu">
+                <X size={20} />
+              </button>
+            </div>
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => {
+                  setActiveCat(c.key);
+                  setMenuOpen(false);
+                }}
+                className={`flex items-center gap-3 text-left px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  activeCat === c.key ? `${c.bg} ${c.text}` : 'text-gray-600'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
