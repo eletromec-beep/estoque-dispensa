@@ -8,7 +8,6 @@ import {
   ShoppingCart,
   Lock,
   ArrowLeft,
-  Package,
   ChevronLeft,
   RefreshCw,
   Menu,
@@ -295,8 +294,12 @@ export default function App() {
   if (screen === 'select') {
     return (
       <div className="max-w-sm mx-auto flex flex-col gap-4 py-8 px-4">
-        <div className="flex flex-col items-center gap-2 mb-4">
-          <Package size={32} className="text-gray-700" />
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <img
+            src="/logo.png"
+            alt="Armário de limpeza"
+            className="w-40 h-auto rounded-xl shadow-sm object-cover"
+          />
           <h1 className="text-xl font-semibold text-gray-800">Estoque da dispensa</h1>
           <p className="text-sm text-gray-400 text-center">Escolha como você quer entrar</p>
         </div>
@@ -469,17 +472,3 @@ export default function App() {
                   setActiveCat(c.key);
                   setMenuOpen(false);
                 }}
-                className={`flex items-center gap-3 text-left px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  activeCat === c.key ? `${c.bg} ${c.text}` : 'text-gray-600'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
