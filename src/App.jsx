@@ -13,6 +13,8 @@ import {
   Copy,
   Check,
   Package,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -52,10 +54,130 @@ function StockBar({ item }) {
   );
 }
 
-function ItemCard({ item, role, onAdjust, onEditMin, onDelete }) {
+function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
   const cat = CATEGORIES.find((c) => c.key === item.category);
   const missing = need(item);
   const isUser = role === 'user';
+  const isAdmin = role === 'admin';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name);
+  const [editUnit, setEditUnit] = useState(item.unit);
+  const [editCategory, setEditCategory] = useState(item.category);
+  const [editMin, setEditMin] = useState(item.min);
+  const [editError, setEditError] = useState('');
+
+  const handleStartEdit = () => {
+    setEditName(item.name);
+    setEditUnit(item.unit);
+    setEditCategory(item.category);
+    setEditMin(item.min);
+    setEditError('');
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditError('');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editName.trim()) {
+      setEditError('O nome do item é obrigatório.');
+      return;
+    }
+
+    const changes = {
+      name: editName.trim(),
+      unit: editUnit.trim() || 'unidade',
+      category: editCategory,
+      min: Math.max(0, editMin),
+    };
+
+    onUpdateItem(item.id, changes);
+    setIsEditing(false);
+    setEditError('');
+  };
+
+  if (isEditing && isAdmin) {
+    return (
+      <div className={`border-2 ${cat.border} bg-white rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-semibold text-gray-700">Editar item</p>
+          <button onClick={handleCancelEdit} className="text-gray-400 hover:text-gray-600" aria-label="Cancelar edição">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-gray-500">Nome</label>
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base focus:border-gray-500 focus:outline-none"
+            placeholder="Nome do item"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex-1 flex flex-col gap-2">
+            <label className="text-xs font-medium text-gray-500">Unidade</label>
+            <input
+              type="text"
+              value={editUnit}
+              onChange={(e) => setEditUnit(e.target.value)}
+              className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base focus:border-gray-500 focus:outline-none"
+              placeholder="Unidade"
+            />
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <label className="text-xs font-medium text-gray-500">Mínimo</label>
+            <input
+              type="number"
+              min="0"
+              value={editMin}
+              onChange={(e) => setEditMin(Math.max(0, parseInt(e.target.value) || 0))}
+              className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base font-mono focus:border-gray-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-gray-500">Categoria</label>
+          <select
+            value={editCategory}
+            onChange={(e) => setEditCategory(e.target.value)}
+            className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base focus:border-gray-500 focus:outline-none bg-white"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {editError && (
+          <p className="text-xs text-red-600 bg-red-50 rounded-lg p-2">{editError}</p>
+        )}
+
+        <div className="flex gap-2 mt-1">
+          <button
+            onClick={handleCancelEdit}
+            className="flex-1 border-2 border-gray-300 text-gray-700 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 active:scale-95 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSaveEdit}
+            className="flex-1 bg-gray-800 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 active:scale-95 transition-all"
+          >
+            Salvar
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className={`border-l-4 ${cat.border} bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow`}>
@@ -97,23 +219,34 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete }) {
         </div>
 
         {!isUser && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Mín.</span>
-            {role === 'admin' ? (
+          <div className="flex items-center gap-1.5">
+            {isAdmin && (
               <>
-                <input
-                  type="number"
-                  min="0"
-                  value={item.min}
-                  onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
-                />
-                <button onClick={() => onDelete(item.id)} className="text-gray-400 hover:text-red-500 active:text-red-600 ml-1" aria-label="Remover item">
-                  <Trash2 size={18} />
+                <button
+                  onClick={handleStartEdit}
+                  className="text-gray-400 hover:text-blue-500 active:text-blue-600 p-1"
+                  aria-label="Editar item"
+                >
+                  <Pencil size={16} />
                 </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className="text-gray-400 hover:text-red-500 active:text-red-600 p-1"
+                  aria-label="Remover item"
+                >
+                  <Trash2 size={16} />
+                </button>
+                <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
+                  <span>Mín.</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={item.min}
+                    onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
+                  />
+                </div>
               </>
-            ) : (
-              <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">{item.min}</span>
             )}
           </div>
         )}
@@ -262,7 +395,7 @@ function ShoppingList({ items, onMarkAsPurchased }) {
   );
 }
 
-function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete }) {
+function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
   return (
     <div className="flex flex-col gap-6">
       {CATEGORIES.map((cat) => {
@@ -276,7 +409,15 @@ function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete }) {
             </div>
             <div className="flex flex-col gap-3">
               {catItems.map((item) => (
-                <ItemCard key={item.id} item={item} role={role} onAdjust={onAdjust} onEditMin={onEditMin} onDelete={onDelete} />
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  role={role}
+                  onAdjust={onAdjust}
+                  onEditMin={onEditMin}
+                  onDelete={onDelete}
+                  onUpdateItem={onUpdateItem}
+                />
               ))}
             </div>
           </div>
@@ -343,6 +484,25 @@ export default function App() {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, min: value } : i)));
     const { error } = await supabase.from('items').update({ min: value }).eq('id', id);
     if (error) console.error(error);
+  };
+
+  const updateItem = async (id, changes) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, ...changes } : item
+      )
+    );
+
+    const { error } = await supabase
+      .from('items')
+      .update(changes)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao atualizar item:', error);
+      setErrorMsg('Erro ao atualizar item. Tente novamente.');
+      setTimeout(() => setErrorMsg(''), 3000);
+    }
   };
 
   const deleteItem = async (id) => {
@@ -576,11 +736,26 @@ export default function App() {
         {showShopping && role === 'admin' ? (
           <ShoppingList items={items} onMarkAsPurchased={handleMarkAsPurchased} />
         ) : role === 'user' ? (
-          <GroupedItemList items={items} role={role} onAdjust={adjust} onEditMin={editMin} onDelete={deleteItem} />
+          <GroupedItemList
+            items={items}
+            role={role}
+            onAdjust={adjust}
+            onEditMin={editMin}
+            onDelete={deleteItem}
+            onUpdateItem={updateItem}
+          />
         ) : (
           <div className="flex flex-col gap-3">
             {items.filter(i => i.category === activeCat).map((item) => (
-              <ItemCard key={item.id} item={item} role={role} onAdjust={adjust} onEditMin={editMin} onDelete={deleteItem} />
+              <ItemCard
+                key={item.id}
+                item={item}
+                role={role}
+                onAdjust={adjust}
+                onEditMin={editMin}
+                onDelete={deleteItem}
+                onUpdateItem={updateItem}
+              />
             ))}
             {items.filter(i => i.category === activeCat).length === 0 && (
               <p className="text-base text-gray-400 text-center py-8">Nenhum item nessa categoria.</p>
