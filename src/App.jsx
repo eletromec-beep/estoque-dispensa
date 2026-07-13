@@ -55,6 +55,8 @@ function StockBar({ item }) {
 function ItemCard({ item, role, onAdjust, onEditMin, onDelete }) {
   const cat = CATEGORIES.find((c) => c.key === item.category);
   const missing = need(item);
+  const isUser = role === 'user';
+  
   return (
     <div className={`border-l-4 ${cat.border} bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
@@ -62,12 +64,14 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete }) {
           <p className="font-semibold text-gray-800 leading-tight text-base">{item.name}</p>
           <p className="text-sm text-gray-500">{item.unit}</p>
         </div>
-        {missing > 0 ? (
-          <span className="text-sm font-medium bg-red-50 text-red-600 px-3 py-1.5 rounded-full whitespace-nowrap ml-2">
-            Faltam {missing}
-          </span>
-        ) : (
-          <span className="text-sm font-medium bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full whitespace-nowrap ml-2">OK</span>
+        {!isUser && (
+          missing > 0 ? (
+            <span className="text-sm font-medium bg-red-50 text-red-600 px-3 py-1.5 rounded-full whitespace-nowrap ml-2">
+              Faltam {missing}
+            </span>
+          ) : (
+            <span className="text-sm font-medium bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full whitespace-nowrap ml-2">OK</span>
+          )
         )}
       </div>
 
@@ -92,25 +96,27 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>Mín.</span>
-          {role === 'admin' ? (
-            <>
-              <input
-                type="number"
-                min="0"
-                value={item.min}
-                onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
-              />
-              <button onClick={() => onDelete(item.id)} className="text-gray-400 hover:text-red-500 active:text-red-600 ml-1" aria-label="Remover item">
-                <Trash2 size={18} />
-              </button>
-            </>
-          ) : (
-            <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">{item.min}</span>
-          )}
-        </div>
+        {!isUser && (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Mín.</span>
+            {role === 'admin' ? (
+              <>
+                <input
+                  type="number"
+                  min="0"
+                  value={item.min}
+                  onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
+                />
+                <button onClick={() => onDelete(item.id)} className="text-gray-400 hover:text-red-500 active:text-red-600 ml-1" aria-label="Remover item">
+                  <Trash2 size={18} />
+                </button>
+              </>
+            ) : (
+              <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">{item.min}</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -204,16 +210,14 @@ function ShoppingList({ items, onMarkAsPurchased }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-base text-gray-600">
-          {toBuy.length === 0
-            ? 'Nada precisa ser comprado agora.'
-            : `${toBuy.length} ${toBuy.length === 1 ? 'item precisa' : 'itens precisam'} de reposição.`}
-        </p>
-      </div>
+      <p className="text-base text-gray-600">
+        {toBuy.length === 0
+          ? 'Nada precisa ser comprado agora.'
+          : `${toBuy.length} ${toBuy.length === 1 ? 'item precisa' : 'itens precisam'} de reposição.`}
+      </p>
 
       {toBuy.length > 0 && (
-        <div className="flex gap-2 mb-2">
+        <div className="flex gap-2">
           <button
             onClick={handleCopyList}
             className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-95 transition-all"
