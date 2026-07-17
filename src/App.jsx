@@ -15,14 +15,16 @@ import {
   Package,
   Pencil,
   X,
+  ClipboardList,
+  Save,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 const CATEGORIES = [
-  { key: 'higiene', label: 'Higiene', border: 'border-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  { key: 'limpeza', label: 'Limpeza', border: 'border-green-400', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  { key: 'materiais', label: 'Materiais', border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  { key: 'descartaveis', label: 'Descartáveis', border: 'border-purple-400', bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500' },
+  { key: 'higiene', label: 'Higiene', border: 'border-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', icon: '🧴' },
+  { key: 'limpeza', label: 'Limpeza', border: 'border-green-400', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500', icon: '🧹' },
+  { key: 'materiais', label: 'Materiais', border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500', icon: '🔧' },
+  { key: 'descartaveis', label: 'Descartáveis', border: 'border-purple-400', bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500', icon: '🧻' },
 ];
 
 const DEFAULT_ITEMS = [
@@ -54,7 +56,7 @@ function StockBar({ item }) {
   );
 }
 
-function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
+function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem, pendingChanges }) {
   const cat = CATEGORIES.find((c) => c.key === item.category);
   const missing = need(item);
   const isUser = role === 'user';
@@ -65,6 +67,14 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
   const [editCategory, setEditCategory] = useState(item.category);
   const [editMin, setEditMin] = useState(item.min);
   const [editError, setEditError] = useState('');
+
+  // Verificar se há alterações pendentes para usuário
+  const safePendingChanges = pendingChanges || {};
+  const hasPendingChange = safePendingChanges[item.id] !== undefined;
+  const displayCurrent = hasPendingChange ? safePendingChanges[item.id] : item.current;
+  
+  // Item com current atualizado para exibição da barra
+  const displayItem = hasPendingChange ? { ...item, current: safePendingChanges[item.id] } : item;
 
   const handleStartEdit = () => {
     setEditName(item.name);
@@ -180,7 +190,7 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
   }
   
   return (
-    <div className={`border-l-4 ${cat.border} bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow`}>
+    <div className={`border-l-4 ${cat.border} bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow ${hasPendingChange ? 'ring-2 ring-amber-300' : ''}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="font-semibold text-gray-800 leading-tight text-base">{item.name}</p>
@@ -195,9 +205,14 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
             <span className="text-sm font-medium bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full whitespace-nowrap ml-2">OK</span>
           )
         )}
+        {isUser && hasPendingChange && (
+          <span className="text-xs font-medium bg-amber-50 text-amber-600 px-2 py-1 rounded-full whitespace-nowrap ml-2">
+            Alterado
+          </span>
+        )}
       </div>
 
-      <StockBar item={item} />
+      <StockBar item={displayItem} />
 
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-3">
@@ -208,7 +223,9 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
           >
             <Minus size={20} />
           </button>
-          <span className="font-mono text-xl font-bold text-gray-800 w-10 text-center">{item.current}</span>
+          <span className={`font-mono text-xl font-bold w-10 text-center ${hasPendingChange ? 'text-amber-600' : 'text-gray-800'}`}>
+            {displayCurrent}
+          </span>
           <button
             onClick={() => onAdjust(item.id, 1)}
             className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-300 text-gray-600 active:scale-95 hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -218,36 +235,32 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
           </button>
         </div>
 
-        {!isUser && (
+        {!isUser && isAdmin && (
           <div className="flex items-center gap-1.5">
-            {isAdmin && (
-              <>
-                <button
-                  onClick={handleStartEdit}
-                  className="text-gray-400 hover:text-blue-500 active:text-blue-600 p-1"
-                  aria-label="Editar item"
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className="text-gray-400 hover:text-red-500 active:text-red-600 p-1"
-                  aria-label="Remover item"
-                >
-                  <Trash2 size={16} />
-                </button>
-                <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
-                  <span>Mín.</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={item.min}
-                    onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
-                  />
-                </div>
-              </>
-            )}
+            <button
+              onClick={handleStartEdit}
+              className="text-gray-400 hover:text-blue-500 active:text-blue-600 p-1"
+              aria-label="Editar item"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              onClick={() => onDelete(item.id)}
+              className="text-gray-400 hover:text-red-500 active:text-red-600 p-1"
+              aria-label="Remover item"
+            >
+              <Trash2 size={16} />
+            </button>
+            <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
+              <span>Mín.</span>
+              <input
+                type="number"
+                min="0"
+                value={item.min}
+                onChange={(e) => onEditMin(item.id, Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-16 border-2 border-gray-300 rounded-lg px-2 py-1 font-mono text-center focus:border-gray-500 focus:outline-none"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -341,61 +354,126 @@ function ShoppingList({ items, onMarkAsPurchased }) {
     onMarkAsPurchased(toBuy);
   };
 
+  const totalItems = toBuy.reduce((sum, item) => sum + need(item), 0);
+
+  if (toBuy.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Check size={32} className="text-emerald-500" />
+        </div>
+        <p className="text-lg font-semibold text-gray-800 mb-1">Estoque em dia!</p>
+        <p className="text-sm text-gray-500">Nada precisa ser comprado agora.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-base text-gray-600">
-        {toBuy.length === 0
-          ? 'Nada precisa ser comprado agora.'
-          : `${toBuy.length} ${toBuy.length === 1 ? 'item precisa' : 'itens precisam'} de reposição.`}
-      </p>
-
-      {toBuy.length > 0 && (
+      <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl shadow-sm p-5 text-white">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <ClipboardList size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white/80">Lista de Compras</p>
+              <p className="text-lg font-bold">{toBuy.length} {toBuy.length === 1 ? 'item' : 'itens'} para repor</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-white/60">Total de unidades</p>
+            <p className="text-2xl font-bold">{totalItems}</p>
+          </div>
+        </div>
+        
         <div className="flex gap-2">
           <button
             onClick={handleCopyList}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-95 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-all active:scale-95"
           >
-            {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-            {copied ? 'Lista copiada' : 'Copiar lista'}
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Copiado!' : 'Copiar lista'}
           </button>
           <button
             onClick={handleMarkAsPurchasedClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 border-2 border-emerald-600 rounded-lg text-sm font-medium text-white hover:bg-emerald-700 active:scale-95 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-sm font-medium transition-all active:scale-95"
           >
             <Package size={16} />
             Marcar como comprado
           </button>
         </div>
-      )}
+      </div>
 
       {CATEGORIES.map((cat) => {
         const catItems = toBuy.filter((i) => i.category === cat.key);
         if (catItems.length === 0) return null;
+        
+        const catTotal = catItems.reduce((sum, item) => sum + need(item), 0);
+        
         return (
-          <div key={cat.key} className="bg-white rounded-xl p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`w-3 h-3 rounded-full ${cat.dot}`} />
-              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{cat.label}</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              {catItems.map((i) => (
-                <div key={i.id} className={`flex items-center justify-between ${cat.bg} rounded-lg px-4 py-3`}>
-                  <span className={`text-base font-medium ${cat.text}`}>{i.name}</span>
-                  <span className="font-mono text-base font-semibold text-gray-700 bg-white px-3 py-1 rounded-lg">
-                    {need(i)} {i.unit}
-                    {need(i) > 1 ? 's' : ''}
-                  </span>
+          <div key={cat.key} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className={`${cat.bg} px-4 py-3 flex items-center justify-between`}>
+              <div className="flex items-center gap-3">
+                <span className="text-xl">{cat.icon}</span>
+                <div>
+                  <p className={`text-sm font-bold ${cat.text}`}>{cat.label}</p>
+                  <p className="text-xs text-gray-600">{catItems.length} {catItems.length === 1 ? 'item' : 'itens'}</p>
                 </div>
-              ))}
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-600">Unidades</p>
+                <p className={`text-lg font-bold ${cat.text}`}>{catTotal}</p>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-gray-100">
+              {catItems.map((item) => {
+                const qty = need(item);
+                const pct = item.min > 0 ? Math.round((item.current / item.min) * 100) : 0;
+                
+                return (
+                  <div key={item.id} className="px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="text-base font-semibold text-gray-800">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.unit}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-gray-800">{qty}</p>
+                        <p className="text-xs text-gray-500">{item.unit}{qty > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-300 ${pct <= 25 ? 'bg-red-400' : pct <= 50 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 w-12 text-right">
+                        {item.current}/{item.min}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
       })}
+
+      <div className="text-center text-xs text-gray-400 py-2">
+        Atualize a lista após as compras para manter o controle
+      </div>
     </div>
   );
 }
 
-function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
+function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete, onUpdateItem, pendingChanges }) {
+  const safePendingChanges = pendingChanges || {};
+  
   return (
     <div className="flex flex-col gap-6">
       {CATEGORIES.map((cat) => {
@@ -417,6 +495,7 @@ function GroupedItemList({ items, role, onAdjust, onEditMin, onDelete, onUpdateI
                   onEditMin={onEditMin}
                   onDelete={onDelete}
                   onUpdateItem={onUpdateItem}
+                  pendingChanges={safePendingChanges}
                 />
               ))}
             </div>
@@ -439,7 +518,11 @@ export default function App() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [lastSync, setLastSync] = useState(null);
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [saveMessage, setSaveMessage] = useState('');
   const ADMIN_PIN = '4132';
+
+  const hasChanges = Object.keys(pendingChanges).length > 0;
 
   const loadItems = useCallback(async (isRefresh = false) => {
     if (isRefresh) setSyncing(true);
@@ -464,20 +547,76 @@ export default function App() {
       setLoading(false);
       setSyncing(false);
     }
-  }, []);
+  }, []); // Removida dependência de items.length
 
   useEffect(() => {
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const adjust = async (id, delta) => {
-    const target = items.find((i) => i.id === id);
-    if (!target) return;
-    const newCurrent = Math.max(0, target.current + delta);
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, current: newCurrent } : i)));
-    const { error } = await supabase.from('items').update({ current: newCurrent }).eq('id', id);
-    if (error) console.error(error);
+  // Função para ajustar estoque
+  const adjust = useCallback((id, delta) => {
+    if (role === 'user') {
+      // Modo usuário: apenas atualiza o estado local pendente
+      setPendingChanges(prev => {
+        const target = items.find(i => i.id === id);
+        if (!target) return prev;
+        
+        const currentPending = prev[id] !== undefined ? prev[id] : target.current;
+        const newValue = Math.max(0, currentPending + delta);
+        
+        if (newValue === target.current) {
+          // Se voltou ao valor original, remove da lista de pendências
+          const newChanges = { ...prev };
+          delete newChanges[id];
+          return newChanges;
+        }
+        
+        return { ...prev, [id]: newValue };
+      });
+    } else {
+      // Modo admin: atualiza diretamente no banco
+      const target = items.find((i) => i.id === id);
+      if (!target) return;
+      const newCurrent = Math.max(0, target.current + delta);
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, current: newCurrent } : i)));
+      supabase.from('items').update({ current: newCurrent }).eq('id', id).then(({ error }) => {
+        if (error) console.error(error);
+      });
+    }
+  }, [role, items]);
+
+  // Função para salvar alterações pendentes do usuário
+  const saveUserChanges = async () => {
+    if (Object.keys(pendingChanges).length === 0) return;
+    
+    setSaveMessage('Salvando...');
+    
+    try {
+      // Atualizar cada item no banco de dados
+      for (const [id, newCurrent] of Object.entries(pendingChanges)) {
+        const { error } = await supabase
+          .from('items')
+          .update({ current: newCurrent })
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        // Atualizar estado local dos itens
+        setItems(prev => prev.map(i => i.id === id ? { ...i, current: newCurrent } : i));
+      }
+      
+      // Limpar pendências
+      setPendingChanges({});
+      setSaveMessage('✅ Salvo com sucesso!');
+      setLastSync(new Date());
+      
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      setSaveMessage('❌ Erro ao salvar. Tente novamente.');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
   };
 
   const editMin = async (id, value) => {
@@ -507,6 +646,12 @@ export default function App() {
 
   const deleteItem = async (id) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    // Remove das pendências se existir
+    setPendingChanges(prev => {
+      const newChanges = { ...prev };
+      delete newChanges[id];
+      return newChanges;
+    });
     const { error } = await supabase.from('items').delete().eq('id', id);
     if (error) console.error(error);
   };
@@ -565,6 +710,8 @@ export default function App() {
               onClick={() => {
                 setRole('user');
                 setScreen('main');
+                setPendingChanges({});
+                setSaveMessage('');
               }}
               className="flex items-center gap-4 border-2 border-gray-200 rounded-xl p-5 active:scale-95 hover:border-gray-300 hover:bg-gray-50 bg-white transition-all"
             >
@@ -651,119 +798,11 @@ export default function App() {
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => {
-                setScreen('select');
-                setRole(null);
-                setShowShopping(false);
-              }}
-              className="flex items-center gap-1 text-base text-gray-500 hover:text-gray-700"
-            >
-              <ArrowLeft size={18} /> Trocar
-            </button>
-            <div className="flex items-center gap-2">
-              <button onClick={() => loadItems(true)} className="text-gray-400 hover:text-gray-600 active:text-gray-700 transition-colors" aria-label="Sincronizar">
-                <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-              </button>
-              <span className="text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
-                {role === 'admin' ? 'Admin' : 'Usuário'}
-              </span>
-            </div>
-          </div>
-          
-          {lastSync && (
-            <p className="text-xs text-gray-400 text-center">
-              Atualizado às {formatLastSync(lastSync)}
-            </p>
-          )}
-        </div>
-
-        {errorMsg && <p className="text-sm text-red-600 text-center bg-red-50 rounded-xl p-3">{errorMsg}</p>}
-
-        {/* User Message */}
-        {role === 'user' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-            <p className="font-medium">Informe a quantidade real disponível no armário. Se acabou, deixe como 0.</p>
-          </div>
-        )}
-
-        {/* Admin Tabs */}
-        {role === 'admin' && (
-          <>
-            <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm">
-              <button
-                onClick={() => setShowShopping(false)}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                  !showShopping 
-                    ? 'bg-gray-800 text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Itens
-              </button>
-              <button
-                onClick={() => setShowShopping(true)}
-                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                  showShopping 
-                    ? 'bg-gray-800 text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <ShoppingCart size={16} /> Comprar
-              </button>
-            </div>
-
-            {/* Category Tabs - Only show in items view */}
-            {!showShopping && (
-              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm overflow-x-auto">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.key}
-                    onClick={() => setActiveCat(cat.key)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                      activeCat === cat.key
-                        ? `${cat.bg} ${cat.text} shadow-sm`
-                        : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Content */}
-        {showShopping && role === 'admin' ? (
-          <ShoppingList items={items} onMarkAsPurchased={handleMarkAsPurchased} />
-        ) : role === 'user' ? (
-          <GroupedItemList
-            items={items}
-            role={role}
-            onAdjust={adjust}
-            onEditMin={editMin}
-            onDelete={deleteItem}
-            onUpdateItem={updateItem}
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {items.filter(i => i.category === activeCat).map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                role={role}
-                onAdjust={adjust}
-                onEditMin={editMin}
-                onDelete={deleteItem}
-                onUpdateItem={updateItem}
-              />
-            ))}
-            {items.filter(i => i.category === activeCat).length === 0 && (
-              <p className="text-base text-gray-400 text-center py-8">Nenhum item nessa categoria.</p>
-            )}
-            {role === 'admin' && <AddItemForm category={activeCat} onAdd={addItem} />}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                if (hasChanges && role === 'user') {
+                  if (window.confirm('Você tem alterações não salvas. Deseja sair sem salvar?')) {
+                    setScreen('select');
+                    setRole(null);
+                    setShowShopping(false);
+                    setPendingChanges({});
+                  }
+                }
