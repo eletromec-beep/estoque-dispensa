@@ -355,6 +355,8 @@ function AddItemForm({ category, onAdd }) {
 function ShoppingList({ items, onMarkAsPurchased }) {
   const toBuy = items.filter((i) => need(i) > 0);
   const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [purchaseQtys, setPurchaseQtys] = useState({});
 
   const generateShoppingListText = () => {
     let text = 'Lista de compras — Dispensa\n\n';
@@ -382,9 +384,16 @@ function ShoppingList({ items, onMarkAsPurchased }) {
     }
   };
 
-  const handleMarkAsPurchasedClick = () => {
-    if (!window.confirm('Deseja atualizar os itens faltantes para o estoque mínimo?')) return;
-    onMarkAsPurchased(toBuy);
+  const handleOpenConfirm = () => {
+    setPurchaseQtys({});
+    setConfirming(true);
+  };
+
+  const handleConfirmPurchase = () => {
+    const itemsWithQtys = toBuy.map((i) => ({ ...i, purchasedQty: purchaseQtys[i.id] ?? need(i) }));
+    onMarkAsPurchased(itemsWithQtys);
+    setConfirming(false);
+    setPurchaseQtys({});
   };
 
   const totalItems = toBuy.reduce((sum, item) => sum + need(item), 0);
@@ -397,6 +406,54 @@ function ShoppingList({ items, onMarkAsPurchased }) {
         </div>
         <p className="text-lg font-semibold text-gray-800 mb-1">Estoque em dia!</p>
         <p className="text-sm text-gray-500">Nada precisa ser comprado agora.</p>
+      </div>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+        <div>
+          <p className="text-base font-semibold text-gray-800">Confirmar quantidades compradas</p>
+          <p className="text-sm text-gray-500 mt-1">O número já vem preenchido com a quantidade sugerida. Ajuste se comprou mais ou menos.</p>
+        </div>
+
+        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
+          {toBuy.map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                <p className="text-xs text-gray-500">
+                  {item.unit} · tinha {item.current}, sugestão: {need(item)}
+                </p>
+              </div>
+              <input
+                type="number"
+                min="0"
+                value={purchaseQtys[item.id] ?? need(item)}
+                onChange={(e) =>
+                  setPurchaseQtys((prev) => ({ ...prev, [item.id]: Math.max(0, parseInt(e.target.value) || 0) }))
+                }
+                className="w-20 border-2 border-gray-300 rounded-lg px-2 py-2 text-center font-mono text-base focus:border-gray-500 focus:outline-none"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setConfirming(false)}
+            className="flex-1 border-2 border-gray-300 text-gray-700 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 active:scale-95 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirmPurchase}
+            className="flex-1 bg-emerald-500 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-emerald-400 active:scale-95 transition-all"
+          >
+            Confirmar compra
+          </button>
+        </div>
       </div>
     );
   }
@@ -431,7 +488,7 @@ function ShoppingList({ items, onMarkAsPurchased }) {
             {copied ? 'Copiado!' : 'Copiar lista'}
           </button>
           <button
-            onClick={handleMarkAsPurchasedClick}
+            onClick={handleOpenConfirm}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-sm font-medium transition-all active:scale-95"
           >
             <Package size={16} />
@@ -668,13 +725,13 @@ export default function App() {
 
   const handleMarkAsPurchased = async (itemsToUpdate) => {
     for (const item of itemsToUpdate) {
-      const { id, min } = item;
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, current: min } : i)));
+      const newCurrent = item.current + (item.purchasedQty || 0);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, current: newCurrent } : i)));
 
       const { error } = await supabase
         .from('items')
-        .update({ current: min, version: item.version + 1 })
-        .eq('id', id)
+        .update({ current: newCurrent, version: item.version + 1 })
+        .eq('id', item.id)
         .eq('version', item.version);
 
       if (error) {
