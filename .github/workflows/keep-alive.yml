@@ -2,18 +2,21 @@ name: Manter Supabase ativo
 
 on:
   schedule:
-    - cron: '0 12 * * 0,3'
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Fazer uma consulta simples ao banco
+      - name: Gravar heartbeat no banco (escrita real, nunca cacheada)
         run: |
-          curl -s "$SUPABASE_URL/rest/v1/items?select=id&limit=1" \
+          curl -s -X POST "$SUPABASE_URL/rest/v1/heartbeat" \
             -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d '{"id": 1, "pinged_at": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
