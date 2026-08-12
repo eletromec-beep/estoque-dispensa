@@ -9,9 +9,10 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Gravar heartbeat no banco (escrita real, nunca cacheada)
+      - name: Gravar heartbeat no banco (com log de depuração)
         run: |
-          curl -s -X POST "$SUPABASE_URL/rest/v1/heartbeat" \
+          echo "Enviando para: $SUPABASE_URL/rest/v1/heartbeat"
+          curl -v -X POST "$SUPABASE_URL/rest/v1/heartbeat" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
             -H "Content-Type: application/json" \
