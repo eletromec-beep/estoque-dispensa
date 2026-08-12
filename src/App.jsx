@@ -358,17 +358,20 @@ function ShoppingList({ items, onMarkAsPurchased }) {
   const [purchaseQtys, setPurchaseQtys] = useState({});
 
   const generateShoppingListText = () => {
-    let text = 'Lista de compras — Dispensa\n\n';
+    const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let text = `*Lista de Compras — Dispensa*\n_Salão do Reino, Cong. Santana do Ipanema - AL_\n📅 ${today}\n`;
+
     CATEGORIES.forEach((cat) => {
       const catItems = toBuy.filter((i) => i.category === cat.key);
       if (catItems.length === 0) return;
-      text += `${cat.label}:\n`;
-      catItems.forEach((i) => {
+      text += `\n${cat.icon} *${cat.label.toUpperCase()}*\n`;
+      catItems.forEach((i, idx) => {
         const qty = need(i);
-        text += `• ${i.name}: comprar ${qty} ${i.unit}${qty > 1 ? 's' : ''}\n`;
+        text += `${idx + 1}. ${i.name} — *${qty}* (${i.unit})\n`;
       });
-      text += '\n';
     });
+
+    text += `\n———————————\nTotal: ${toBuy.length} ${toBuy.length === 1 ? 'item' : 'itens'} a comprar`;
     return text;
   };
 
