@@ -107,7 +107,6 @@ function ItemCard({ item, role, onAdjust, onEditMin, onDelete, onUpdateItem }) {
       unit: editUnit.trim() || 'unidade',
       category: editCategory,
       min: Math.max(0, editMin),
-      version: item.version,
     };
 
     onUpdateItem(item.id, changes);
@@ -626,6 +625,7 @@ export default function App() {
     } catch (e) {
       console.error(e);
       setErrorMsg('Não foi possível conectar ao banco de dados. Verifique as variáveis de ambiente do Supabase.');
+      setItems((prev) => (prev.length === 0 ? DEFAULT_ITEMS : prev));
     } finally {
       setLoading(false);
       setSyncing(false);
@@ -694,12 +694,13 @@ export default function App() {
   const updateItem = async (id, changes) => {
     const target = items.find((i) => i.id === id);
     if (!target) return;
+    const newVersion = target.version + 1;
 
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item)));
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes, version: newVersion } : item)));
 
     const { error } = await supabase
       .from('items')
-      .update({ ...changes, version: target.version + 1 })
+      .update({ ...changes, version: newVersion })
       .eq('id', id)
       .eq('version', target.version);
 
